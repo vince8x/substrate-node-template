@@ -38,6 +38,11 @@ pub mod pallet {
 	// https://docs.substrate.io/v3/runtime/storage#declaring-storage-items
 	pub type Something<T> = StorageValue<_, u32>;
 
+	#[pallet::storage]
+	#[pallet::getter(fn getnumber)]
+	pub type Number<T: Config> = StorageMap<_, Blake2_128Concat,
+	 T::AccountId, u32, ValueQuery, >;
+
 	// Pallets use events to inform users when important changes are made.
 	// https://docs.substrate.io/v3/runtime/events-and-errors
 	#[pallet::event]
@@ -46,6 +51,7 @@ pub mod pallet {
 		/// Event documentation should end with an array that provides descriptive names for event
 		/// parameters. [something, who]
 		SomethingStored(u32, T::AccountId),
+		SomethingRemoved(T::AccountId)
 	}
 
 	// Errors inform users that something went wrong.
@@ -79,6 +85,31 @@ pub mod pallet {
 			// Return a successful DispatchResultWithPostInfo
 			Ok(())
 		}
+
+		#[pallet::weight(10_000 + T::DbWeight::get().reads_writes(1,1))]
+		pub fn put_number(origin: OriginFor<T>, number: u32) -> DispatchResult {
+			let who = ensure_signed(origin)?;
+
+			<Number<T>>::insert(who.clone(), number);
+
+			Self::deposit_event(Event::SomethingStored(number, who));
+
+			Ok(())
+		}
+
+		#[pallet::weight(10_000 + T::DbWeight::get().reads_writes(1,1))]
+		pub fn remove_number(origin: OriginFor<T>) -> DispatchResult {
+			let who = ensure_signed(origin)?;
+
+			<Number<T>>::remove(who.clone());
+
+			Self::deposit_event(Event::SomethingRemoved(who));
+
+			Ok(())
+		}
+
+		
+
 
 		/// An example dispatchable that may throw a custom error.
 		#[pallet::weight(10_000 + T::DbWeight::get().reads_writes(1,1))]
